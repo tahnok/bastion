@@ -70,10 +70,9 @@ def lora_loop(rfm9x):
                 print(raw_packet)
                 continue
             print(parsed_packet)
-            incoming_packets.put(parsed_packet.to_json())
+            for subscriber in subscribers:
+                subscriber.put_nowait(parsed_packet.to_json())
             time.sleep(1)
-        else:
-            print("nothin")
         sys.stdout.flush()
 
         time.sleep(0.1)
@@ -85,11 +84,14 @@ def lora_main():
 
 async def webhook_handler(websocket, path):
     print("Connected!")
+    queue = Queue()
+    subscribers.add(queue)
     while True:
-        packet = incoming_packets.get()
+        packet = queue.get()
         await websocket.send(packet)
 
-incoming_packets = Queue()
+
+subscribers = set()
 
 def main():
     threading.Thread(target=lora_main).start()
